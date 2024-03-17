@@ -1,15 +1,17 @@
 #!/bin/bash
 #SBATCH --nodes 1
-#SBATCH --cpus-per-task 40
+#SBATCH --ntasks 1
+#SBATCH --cpus-per-task 1
+#SBATCH --mem 128G
+#SBATCH --partition gpu
+#SBATCH --gres gpu:1
+#SBATCH --qos gpu
+#SBATCH --time 24:00:00
 
 #SBATCH --mail-user=thibault.golaz@epfl.ch 
 #SBATCH --mail-type=ALL
 
-#SBATCH --partition=gpu
-#SBATCH --ntasks 1
-
-
-sbatch ./distributed_train.sh 1 --dataset torch/CIFAR10 \
+srun ./distributed_train.sh 1 --dataset torch/CIFAR10 \
   --data-dir ./data/CIFAR10/ \
   --model MONet_T_no_multistage \
   --opt adamw \

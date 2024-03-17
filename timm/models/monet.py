@@ -13,7 +13,7 @@ from ._builder import build_model_with_cfg
 from ._manipulate import named_apply, checkpoint_seq
 from ._registry import register_model
 
-__all__ = ['PolyBlock']
+__all__ = ['PolyBlock'] 
 
 
 def _cfg(url='', **kwargs):
@@ -39,7 +39,7 @@ class Affine(nn.Module):
 
     def forward(self, x):
         return torch.addcmul(self.beta, self.alpha, x)
-
+    
 class PolyBlock(nn.Module):
     def __init__(
             self,
@@ -56,18 +56,16 @@ class PolyBlock(nn.Module):
             use_act = False,
     ):
         super().__init__()
-
-
         self.embed_dim = embed_dim
         self.expansion_factor = expansion_factor
         self.norm = norm_layer(self.embed_dim)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.mlp1 = mlp_layer(self.embed_dim, self.embed_dim, self.embed_dim, act_layer=act_layer,drop=drop,use_spatial=True,use_act=use_act)
         self.mlp2= mlp_layer(self.embed_dim, self.embed_dim*self.expansion_factor, self.embed_dim,act_layer=act_layer, drop=drop,use_spatial=False,use_act=use_act)
-
+    
     def forward(self, x):
         z = self.norm(x)
-        z = self.mlp1(z)
+        z = self.mlp1(z)  
         x = x + self.drop_path(z)
         z = self.norm(x)
         z = self.mlp2(z)
@@ -84,7 +82,7 @@ class basic_blocks(nn.Module):
                 PolyBlock(embed_dim = embed_dim, expansion_factor = expansion_factor, drop = dropout, drop_path = drop_path,use_act = use_act,act_layer=act_layer,norm_layer=norm_layer),
             ) for _ in range(layers[index])]
         )
-
+    
     def forward(self, x):
         x = rearrange(x, 'b c h w -> b h w c')
         x = self.model(x)
@@ -107,7 +105,7 @@ class Downsample(nn.Module):
         # x = self.proj(x)  # B, C, H, W
         # x = x.permute(0, 2, 3, 1)
         return x
-
+    
 
 
 class MONet(nn.Module):
@@ -153,14 +151,7 @@ class MONet(nn.Module):
             oldps[0] = oldps[0] * ps[0]
             oldps[1] = oldps[1] * ps[1]
         super().__init__()
-
-        if act_layer is not None:
-            act_layer = getattr(nn, act_layer)
-
-        print('\n\n\n')
-        print(f"{act_layer=}, {use_act=}, {type(act_layer)=}")
-        print('\n\n\n')
-
+    
         self.fs = nn.Conv2d(in_chans, embed_dim[0], kernel_size=patch_size[0], stride=patch_size[0])
         self.fs2 = nn.Conv2d(embed_dim[0], embed_dim[0], kernel_size=2, stride=2)
         network = []
@@ -179,7 +170,7 @@ class MONet(nn.Module):
             nn.Linear(embed_dim[-1], self.num_classes)
         )
         self.init_weights(nlhb=nlhb)
-
+        
     def forward(self, x):
         x1 = self.fs(x)
         x1 = self.fs2(x1)
@@ -189,7 +180,7 @@ class MONet(nn.Module):
         embedding = self.network(x1)
         out = self.head(embedding)
         return out
-
+    
     def forward_features(self, x):
         x1 = self.fs(x)
         x1 = self.fs2(x1)
@@ -268,18 +259,75 @@ def MONet_T(pretrained=False, **kwargs):
     embed_dims = [64, 128, 192, 192]
     expansion_factor = [3, 3, 3, 3]
     dict_args = dict(
-        patch_size=[2],
+        patch_size=[2], 
         layers=layers,
         transitions=transitions,
         embed_dim=embed_dims,
         expansion_factor = expansion_factor,
         **kwargs
         )
-
+    
     model_args = dict_args
     model = _create_improved_MONet('MONet_T', pretrained=pretrained, **model_args)
     return model
 
+
+@register_model
+def MONet_T_no_multistage(pretrained=False, **kwargs):
+    transitions = [True, True, True, True]
+    layers = [1, 1, 1, 1]  # real patch size [8,16,32,64]
+    embed_dims = [192, 192, 192, 192]
+    expansion_factor = [3, 3, 3, 3]
+    dict_args = dict(
+        patch_size=[2], 
+        layers=layers,
+        transitions=transitions,
+        embed_dim=embed_dims,
+        expansion_factor = expansion_factor,
+        **kwargs
+        )
+    
+    model_args = dict_args
+    model = _create_improved_MONet('MONet_T', pretrained=pretrained, **model_args)
+    return model
+
+@register_model
+def MONet_T_no_multistage_no_conv(pretrained=False, **kwargs):
+    transitions = [False, False, False, False]
+    layers = [4, 8, 12, 10]  # real patch size [8,16,32,64]
+    embed_dims = [192, 192, 192, 192]
+    expansion_factor = [3, 3, 3, 3]
+    dict_args = dict(
+        patch_size=[2], 
+        layers=layers,
+        transitions=transitions,
+        embed_dim=embed_dims,
+        expansion_factor = expansion_factor,
+        **kwargs
+        )
+    
+    model_args = dict_args
+    model = _create_improved_MONet('MONet_T', pretrained=pretrained, **model_args)
+    return model
+
+@register_model
+def MONet_T_one(pretrained=False, **kwargs):
+    transitions = [False]
+    layers = [1]  # real patch size [8,16,32,64]
+    embed_dims = [192]
+    expansion_factor = [3]
+    dict_args = dict(
+        patch_size=[2], 
+        layers=layers,
+        transitions=transitions,
+        embed_dim=embed_dims,
+        expansion_factor = expansion_factor,
+        **kwargs
+        )
+    
+    model_args = dict_args
+    model = _create_improved_MONet('MONet_T_one', pretrained=pretrained, **model_args)
+    return model
 
 @register_model
 def MONet_S(pretrained=False, **kwargs):
@@ -288,14 +336,16 @@ def MONet_S(pretrained=False, **kwargs):
     embed_dims = [128,192,256,384]
     expansion_factor = [3, 3, 3, 3]
     dict_args = dict(
-        patch_size=[2],
+        patch_size=[2], 
         layers=layers,
         transitions=transitions,
         embed_dim=embed_dims,
         expansion_factor = expansion_factor,
         **kwargs
         )
-
+    
     model_args = dict_args
     model = _create_improved_MONet('MONet_S', pretrained=pretrained, **model_args)
     return model
+
+
